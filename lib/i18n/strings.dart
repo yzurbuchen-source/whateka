@@ -113,6 +113,12 @@ class _Strings {
   final String profileLocationRadius;
   final String profileLanguage;
   final String profileSignOut;
+  final String profileDeleteAccount;
+  final String profileDeleteAccountDialogTitle;
+  final String profileDeleteAccountDialogBody;
+  final String profileDeleteAccountConfirm;
+  final String profileDeleteAccountSuccess;
+  final String profileDeleteAccountError;
 
   // Submit activity
   final String submitTitle;
@@ -413,6 +419,12 @@ class _Strings {
     required this.profileLocationRadius,
     required this.profileLanguage,
     required this.profileSignOut,
+    required this.profileDeleteAccount,
+    required this.profileDeleteAccountDialogTitle,
+    required this.profileDeleteAccountDialogBody,
+    required this.profileDeleteAccountConfirm,
+    required this.profileDeleteAccountSuccess,
+    required this.profileDeleteAccountError,
     required this.submitTitle,
     required this.submitName,
     required this.submitLocation,
@@ -670,6 +682,12 @@ const _Strings _fr = _Strings(
   profileLocationRadius: "Rayon",
   profileLanguage: "Langue",
   profileSignOut: "Se déconnecter",
+  profileDeleteAccount: "Supprimer mon compte",
+  profileDeleteAccountDialogTitle: "Supprimer le compte",
+  profileDeleteAccountDialogBody: "Cette action est irréversible. Toutes vos données seront définitivement supprimées.",
+  profileDeleteAccountConfirm: "Supprimer définitivement",
+  profileDeleteAccountSuccess: "Votre compte a été supprimé.",
+  profileDeleteAccountError: "Erreur lors de la suppression du compte.",
   submitTitle: "Proposer une activité",
   submitName: "Nom de l'activité",
   submitLocation: "Lieu",
@@ -926,6 +944,12 @@ const _Strings _en = _Strings(
   profileLocationRadius: "Radius",
   profileLanguage: "Language",
   profileSignOut: "Sign out",
+  profileDeleteAccount: "Delete my account",
+  profileDeleteAccountDialogTitle: "Delete account",
+  profileDeleteAccountDialogBody: "This action is irreversible. All your data will be permanently deleted.",
+  profileDeleteAccountConfirm: "Delete permanently",
+  profileDeleteAccountSuccess: "Your account has been deleted.",
+  profileDeleteAccountError: "Error deleting account.",
   submitTitle: "Submit an activity",
   submitName: "Activity name",
   submitLocation: "Location",

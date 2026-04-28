@@ -27,13 +27,13 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Whateka utilise l'appareil photo pour vous permettre d'ajouter des photos lors de la soumission d'une activité.</string>
+	<string>Whateka utilise l'appareil photo pour vous permettre de photographier un lieu lors de la soumission d'une activité. Par exemple, prenez une photo d'un sentier de randonnée ou d'un restaurant pour illustrer votre proposition.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Whateka utilise votre position pour afficher les activités proches de vous et personnaliser les recommandations.</string>
+	<string>Whateka utilise votre position GPS pour afficher les activités proches de vous — randonnées, musées, restaurants — dans un rayon de 10 à 100 km. Par exemple, depuis Lausanne, l'app vous propose des balades au bord du lac accessibles immédiatement.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Whateka utilise votre position pour afficher les activités proches de vous et personnaliser les recommandations.</string>
+	<string>Whateka utilise votre position GPS pour afficher les activités proches de vous — randonnées, musées, restaurants — dans un rayon de 10 à 100 km. Par exemple, depuis Lausanne, l'app vous propose des balades au bord du lac accessibles immédiatement.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Whateka accède à votre bibliothèque de photos pour vous permettre d'ajouter des images lors de la soumission d'une activité.</string>
+	<string>Whateka accède à votre bibliothèque de photos pour illustrer une activité que vous soumettez. Par exemple, sélectionnez une photo existante d'un musée ou d'une plage pour accompagner votre proposition d'activité.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
