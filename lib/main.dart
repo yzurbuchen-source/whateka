@@ -46,26 +46,26 @@ void main() async {
 }
 
 class AppColors {
-  // Nouvelle palette Whateka — épurée, fond beige sable
-  static const Color paper   = Color(0xFFF7F2E9); // fond principal (beige sable)
-  static const Color surface = Color(0xFFFFFFFF); // cartes blanches
-  static const Color ink     = Color(0xFF0A0A0B); // texte principal
+  // Palette officielle Whateka (brand board)
+  static const Color surface = Color(0xFFFFFFFF); // fond principal blanc
+  static const Color paper   = Color(0xFFF7F2E9); // alias conservé (non utilisé pour le scaffold)
+  static const Color ink     = Color(0xFF000000); // texte principal
   static const Color stone   = Color(0xFF86868B); // texte secondaire
   static const Color line    = Color(0xFFE5E5E7); // séparateurs
 
-  // Couleurs de marque Whateka (conservées)
-  static const Color cyan    = Color(0xFF00B8D9); // accent primaire, logo
-  static const Color orange  = Color(0xFFFF6F61); // CTA secondaire, chip gastronomie
+  // Couleurs de marque Whateka (#00B8D9 / #FF6F61 / #97C45F / #926335 / #F6AE2D)
+  static const Color cyan    = Color(0xFF00B8D9); // identité visuelle, bouton outlined
+  static const Color orange  = Color(0xFFFF6F61); // CTA principal, chip gastronomie
   static const Color green   = Color(0xFF97C45F); // chip nature, succès
   static const Color brown   = Color(0xFF926335); // chip culture
-  static const Color yellow  = Color(0xFFF6AE2D); // chip adventure, warnings
+  static const Color yellow  = Color(0xFFF6AE2D); // chip aventure, avertissements
 
-  // Alias rétrocompat pour les fichiers non refactorés
+  // Alias de compatibilité
   static const Color black   = ink;
   static const Color white   = surface;
   static const Color teal    = cyan;
   static const Color coral   = orange;
-  static const Color lightBg = paper;
+  static const Color lightBg = surface;
 }
 
 class MyApp extends StatefulWidget {
@@ -99,14 +99,15 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    final baseTextTheme = GoogleFonts.interTextTheme();
+    // Polices principales : Concert One (titres) + Montserrat (corps)
+    final baseTextTheme = GoogleFonts.montserratTextTheme();
 
     final theme = ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.cyan,
-        primary: AppColors.cyan,
-        secondary: AppColors.orange,
+        primary: AppColors.orange,
+        secondary: AppColors.cyan,
         tertiary: AppColors.green,
         surface: AppColors.surface,
         onPrimary: AppColors.surface,
@@ -114,25 +115,23 @@ class _MyAppState extends State<MyApp> {
         onSurface: AppColors.ink,
         error: const Color(0xFFE53935),
       ),
-      scaffoldBackgroundColor: AppColors.paper,
+      scaffoldBackgroundColor: AppColors.surface,
 
       textTheme: baseTextTheme.copyWith(
-        // Display : grands titres (34-40px, bold, serré)
-        displayLarge: GoogleFonts.inter(fontSize: 40, fontWeight: FontWeight.w700, letterSpacing: -1.2, color: AppColors.ink),
-        displayMedium: GoogleFonts.inter(fontSize: 34, fontWeight: FontWeight.w700, letterSpacing: -1.0, color: AppColors.ink),
-        displaySmall: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: -0.8, color: AppColors.ink),
-        // Headlines
-        headlineLarge: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.6, color: AppColors.ink),
-        headlineMedium: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w600, letterSpacing: -0.4, color: AppColors.ink),
-        headlineSmall: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: -0.2, color: AppColors.ink),
-        // Body
-        bodyLarge: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w400, color: AppColors.ink, height: 1.5),
-        bodyMedium: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.ink, height: 1.5),
-        bodySmall: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.stone, height: 1.4),
-        // Labels (boutons, chips)
-        labelLarge: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.ink),
-        labelMedium: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.stone),
-        labelSmall: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.stone, letterSpacing: 0.5),
+        // Display & Headlines : Concert One (police principale de marque)
+        displayLarge:  GoogleFonts.concertOne(fontSize: 40, color: AppColors.ink),
+        displayMedium: GoogleFonts.concertOne(fontSize: 34, color: AppColors.ink),
+        displaySmall:  GoogleFonts.concertOne(fontSize: 28, color: AppColors.ink),
+        headlineLarge:  GoogleFonts.concertOne(fontSize: 24, color: AppColors.ink),
+        headlineMedium: GoogleFonts.concertOne(fontSize: 20, color: AppColors.ink),
+        headlineSmall:  GoogleFonts.concertOne(fontSize: 17, color: AppColors.ink),
+        // Body & Labels : Montserrat (police corps de texte)
+        bodyLarge:  GoogleFonts.montserrat(fontSize: 17, fontWeight: FontWeight.w400, color: AppColors.ink, height: 1.5),
+        bodyMedium: GoogleFonts.montserrat(fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.ink, height: 1.5),
+        bodySmall:  GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.stone, height: 1.4),
+        labelLarge:  GoogleFonts.montserrat(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.ink),
+        labelMedium: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.stone),
+        labelSmall:  GoogleFonts.montserrat(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.stone, letterSpacing: 0.5),
       ),
 
       appBarTheme: AppBarTheme(
@@ -140,27 +139,27 @@ class _MyAppState extends State<MyApp> {
         foregroundColor: AppColors.ink,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.ink),
+        titleTextStyle: GoogleFonts.concertOne(fontSize: 20, color: AppColors.ink),
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.cyan,   // CTA principal = cyan, pas orange
+          backgroundColor: AppColors.orange,  // CTA principal = orange (brand board)
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
           elevation: 0,
-          textStyle: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: -0.2),
+          textStyle: GoogleFonts.montserrat(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.ink,
-          side: const BorderSide(color: AppColors.line, width: 0.5),
+          foregroundColor: AppColors.cyan,
+          side: const BorderSide(color: AppColors.cyan, width: 1.5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-          textStyle: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500),
+          textStyle: GoogleFonts.montserrat(fontSize: 15, fontWeight: FontWeight.w500),
         ),
       ),
 
@@ -168,7 +167,7 @@ class _MyAppState extends State<MyApp> {
         filled: true,
         fillColor: AppColors.surface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        hintStyle: GoogleFonts.inter(color: AppColors.stone, fontWeight: FontWeight.w400),
+        hintStyle: GoogleFonts.montserrat(color: AppColors.stone, fontWeight: FontWeight.w400),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.line, width: 0.5),

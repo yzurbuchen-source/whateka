@@ -207,6 +207,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _deleteAccount() async {
+    final s = S.current;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(s.profileDeleteAccountDialogTitle),
+        content: Text(s.profileDeleteAccountDialogBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(s.btnCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(s.profileDeleteAccountConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _isLoading = true);
+    try {
+      await Supabase.instance.client.functions.invoke('delete-account');
+      await Supabase.instance.client.auth.signOut();
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(s.profileDeleteAccountError)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   bool _isRadiusSelected(_RadiusOption o) {
     return _selectedRadiusKm == o.radiusKm && _selectedRegion == o.region;
   }
@@ -423,11 +462,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       runSpacing: 8,
                       children: _radiusOptions.map((option) {
                         final isSelected = _isRadiusSelected(option);
-                        return GestureDetector(
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
                           onTap: () => setState(() {
                             _selectedRadiusKm = option.radiusKm;
                             _selectedRegion = option.region;
                           }),
+                          borderRadius: BorderRadius.circular(999),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
                             padding: const EdgeInsets.symmetric(
@@ -456,6 +498,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                             ),
+                          ),
                           ),
                         );
                       }).toList(),
@@ -505,6 +548,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 label: Text(s.profileSignOut),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.orange,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  textStyle: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 15),
+                ),
+              ),
+              const SizedBox(height: 4),
+              TextButton.icon(
+                onPressed: _isLoading ? null : _deleteAccount,
+                icon: const Icon(Icons.delete_forever_outlined, size: 18),
+                label: Text(s.profileDeleteAccount),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   textStyle: const TextStyle(
                       fontWeight: FontWeight.w600, fontSize: 15),
@@ -571,8 +626,11 @@ class _ModeChoice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
@@ -606,6 +664,7 @@ class _ModeChoice extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
