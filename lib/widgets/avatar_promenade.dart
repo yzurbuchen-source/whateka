@@ -62,67 +62,102 @@ class _AvatarPromenadeState extends State<AvatarPromenade>
   static const double _displayHeight = 160;
   static const double _scale = _displayWidth / _svgWidth;
 
-  // Palettes par avatar (extraites des SVG originaux).
+  // Palettes par avatar (15 personnages thematiques style alpin Suisse,
+  // refonte complete v2026-05). Couleurs alignees EXACTEMENT sur les SVG :
+  //   - sleeve : couleur du haut/manche (le bras anime utilise cette couleur)
+  //   - pants  : couleur des jambes animees (skin pour shorts, pant color sinon)
+  //   - shoe   : couleur des chaussures animees
+  //   - skin   : couleur des mains animees (= peau visible du visage SVG)
   static const Map<int, _Palette> _palettes = {
-    1: _Palette( // Sam : hoodie cyan + pantalon navy
-      sleeve: Color(0xFF00B8D9),
-      pants: Color(0xFF1C2A3A),
-      shoe: Color(0xFF0A0A0B),
-      skin: Color(0xFFF0C99A),
+    1: _Palette( // Lina - randonneuse (bermuda kaki, polo vert, sac cyan)
+      sleeve: Color(0xFF5A7F6F),
+      pants: Color(0xFFE8D4B8), // shorts -> jambes nues
+      shoe: Color(0xFF5C4A3A),
+      skin: Color(0xFFE8D4B8),
     ),
-    2: _Palette( // Max : cardigan beige + pantalon brun
-      sleeve: Color(0xFFE8DCC0),
-      pants: Color(0xFF6B4423),
-      shoe: Color(0xFF3D2817),
-      skin: Color(0xFFE0AE7B),
+    2: _Palette( // Tom - cycliste (maillot jaune, cuissard, casque)
+      sleeve: Color(0xFFD4BC34),
+      pants: Color(0xFFE8D4B8), // cuissard -> jambes nues sous le short
+      shoe: Color(0xFFF5F5F5),
+      skin: Color(0xFFE8D4B8),
     ),
-    3: _Palette( // Lina : bras nus + jambes nues + sandales
-      sleeve: Color(0xFFF0C99A),
-      pants: Color(0xFFF0C99A),
-      shoe: Color(0xFF8B6F47),
-      skin: Color(0xFFF0C99A),
+    3: _Palette( // Aicha - paysagiste (chapeau paille, peau foncee)
+      sleeve: Color(0xFF6B8F7F),
+      pants: Color(0xFFD4C4AE),
+      shoe: Color(0xFFC4A57A),
+      skin: Color(0xFF7D5840),
     ),
-    4: _Palette( // Amadou : sweat noir + pantalon gris + baskets cyan
-      sleeve: Color(0xFF1A1A1A),
-      pants: Color(0xFF2D2D2D),
-      shoe: Color(0xFF00B8D9),
-      skin: Color(0xFF5D3D28),
+    4: _Palette( // Marc - architecte (cardigan, lunettes, sac fourre-tout)
+      sleeve: Color(0xFF556B7F),
+      pants: Color(0xFF2C3E50),
+      shoe: Color(0xFF5C4A3A),
+      skin: Color(0xFFE8D4B8),
     ),
-    5: _Palette( // Theo : bras nus + short blanc + chaussettes blanches
-      sleeve: Color(0xFFE0AE7B),
-      pants: Color(0xFFF0F0F0),
-      shoe: Color(0xFFFFFFFF),
-      skin: Color(0xFFE0AE7B),
+    5: _Palette( // Anais - photographe (veste kaki, appareil photo)
+      sleeve: Color(0xFF556B7F),
+      pants: Color(0xFF1A1A20),
+      shoe: Color(0xFF2A2A2A),
+      skin: Color(0xFFE8D4B8),
     ),
-    6: _Palette( // Chloe : blouse blanche + jupe lavande + sandales
-      sleeve: Color(0xFFFFFFFF),
-      pants: Color(0xFFC7B3E0),
-      shoe: Color(0xFF8B6F47),
-      skin: Color(0xFFF0C99A),
+    6: _Palette( // Igor - musicien (manteau gris, etui guitare)
+      sleeve: Color(0xFF8B8680),
+      pants: Color(0xFF2C3E50),
+      shoe: Color(0xFF2A2A2A),
+      skin: Color(0xFFE8D4B8),
     ),
-    7: _Palette( // Lucas : chemise rouge + jean + bottes marron
-      sleeve: Color(0xFF992D2D),
-      pants: Color(0xFF1C2A3A),
-      shoe: Color(0xFF3D2817),
-      skin: Color(0xFFE0AE7B),
+    7: _Palette( // Pauline - sommeliere (gilet bordeaux, foulard)
+      sleeve: Color(0xFF6B5A7F),
+      pants: Color(0xFF1A1A1A),
+      shoe: Color(0xFF2A2A2A),
+      skin: Color(0xFFE8D4B8),
     ),
-    8: _Palette( // Yuki : dress vert + jambes nues + sandales
-      sleeve: Color(0xFF97C45F),
-      pants: Color(0xFFE8B88B),
-      shoe: Color(0xFF3D2817),
+    8: _Palette( // Matteo - patissier (toque blanche, tablier)
+      sleeve: Color(0xFFD4C4AE),
+      pants: Color(0xFF2C2C2C),
+      shoe: Color(0xFFF5F5F5),
+      skin: Color(0xFFE8D4B8),
+    ),
+    9: _Palette( // Lucas - skieur (combi marine, lunettes ski)
+      sleeve: Color(0xFF1F3A4A),
+      pants: Color(0xFF1F3A4A),
+      shoe: Color(0xFF1A1A1A),
+      skin: Color(0xFFE8D4B8),
+    ),
+    10: _Palette( // Emma - traileuse (tank corail, short, sac d'eau)
+      sleeve: Color(0xFFE8D4B8), // bras nus
+      pants: Color(0xFFE8D4B8), // short -> jambes nues
+      shoe: Color(0xFFE6F029),
+      skin: Color(0xFFE8D4B8),
+    ),
+    11: _Palette( // Yuki - kayakiste (gilet jaune fluo, pagaie)
+      sleeve: Color(0xFF1A1A1A), // rashguard noir
+      pants: Color(0xFFF0DCC4), // short -> jambes nues
+      shoe: Color(0xFF6B7A8B),
+      skin: Color(0xFFF0DCC4),
+    ),
+    12: _Palette( // Maya - thermes (peignoir blanc, turban corail)
+      sleeve: Color(0xFFF8F4ED),
+      pants: Color(0xFFF8F4ED), // peignoir long
+      shoe: Color(0xFFC4A57A),
       skin: Color(0xFFE8B88B),
     ),
-    9: _Palette( // Emma : veste jean bleu + jean noir + baskets blanches
-      sleeve: Color(0xFF3E5D7E),
-      pants: Color(0xFF0A0A0B),
-      shoe: Color(0xFFFFFFFF),
-      skin: Color(0xFFF0C99A),
+    13: _Palette( // Hugo - lecteur (cardigan beige, lunettes, livre)
+      sleeve: Color(0xFFA89274),
+      pants: Color(0xFF6B5A6B),
+      shoe: Color(0xFF5C4A3A),
+      skin: Color(0xFFE8D4B8),
     ),
-    10: _Palette( // Nathan : polo jaune + chino + baskets blanches
-      sleeve: Color(0xFFF6AE2D),
-      pants: Color(0xFFC8A878),
-      shoe: Color(0xFFFFFFFF),
-      skin: Color(0xFFE0AE7B),
+    14: _Palette( // Nathan - grimpeur (harnais orange, corde)
+      sleeve: Color(0xFFD4A878), // bras nus peau bronzee
+      pants: Color(0xFFD4A878), // short -> jambes nues
+      shoe: Color(0xFFD83034),
+      skin: Color(0xFFD4A878),
+    ),
+    15: _Palette( // Sophia - maman (echarpe portage, sac a langer)
+      sleeve: Color(0xFFC4B5DD),
+      pants: Color(0xFFBFBAB0),
+      shoe: Color(0xFFF5F5F5),
+      skin: Color(0xFFE8D4B8),
     ),
   };
 
@@ -538,16 +573,21 @@ class WhatekaAvatar {
   const WhatekaAvatar(this.id, this.name, this.filename);
 
   static const all = [
-    WhatekaAvatar(1, 'Sam', '01_sam.svg'),
-    WhatekaAvatar(2, 'Max', '02_max.svg'),
-    WhatekaAvatar(3, 'Lina', '03_lina.svg'),
-    WhatekaAvatar(4, 'Amadou', '04_amadou.svg'),
-    WhatekaAvatar(5, 'Théo', '05_theo.svg'),
-    WhatekaAvatar(6, 'Chloé', '06_chloe.svg'),
-    WhatekaAvatar(7, 'Lucas', '07_lucas.svg'),
-    WhatekaAvatar(8, 'Yuki', '08_yuki.svg'),
-    WhatekaAvatar(9, 'Emma', '09_emma.svg'),
-    WhatekaAvatar(10, 'Nathan', '10_nathan.svg'),
+    WhatekaAvatar(1, 'Lina', '01_lina.svg'),
+    WhatekaAvatar(2, 'Tom', '02_tom.svg'),
+    WhatekaAvatar(3, 'Aïcha', '03_aicha.svg'),
+    WhatekaAvatar(4, 'Marc', '04_marc.svg'),
+    WhatekaAvatar(5, 'Anaïs', '05_anais.svg'),
+    WhatekaAvatar(6, 'Igor', '06_igor.svg'),
+    WhatekaAvatar(7, 'Pauline', '07_pauline.svg'),
+    WhatekaAvatar(8, 'Matteo', '08_matteo.svg'),
+    WhatekaAvatar(9, 'Lucas', '09_lucas.svg'),
+    WhatekaAvatar(10, 'Emma', '10_emma.svg'),
+    WhatekaAvatar(11, 'Yuki', '11_yuki.svg'),
+    WhatekaAvatar(12, 'Maya', '12_maya.svg'),
+    WhatekaAvatar(13, 'Hugo', '13_hugo.svg'),
+    WhatekaAvatar(14, 'Nathan', '14_nathan.svg'),
+    WhatekaAvatar(15, 'Sophia', '15_sophia.svg'),
   ];
 
   static WhatekaAvatar byId(int id) =>
