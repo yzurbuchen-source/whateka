@@ -90,6 +90,10 @@ class _SingleActivityScreenState extends State<SingleActivityScreen> {
       arguments: {
         'latitude': activity.latitude,
         'longitude': activity.longitude,
+        // ID pour que la map sache que c'est CETTE activité a mettre en
+        // avant : centrage zoom + ouverture auto du detail + force-include
+        // dans la liste meme si elle echoue le filtre Live.
+        'activity_id': activity.id,
       },
     );
   }

@@ -35,6 +35,57 @@ class _MapScreenState extends State<MapScreen> {
   // false (Tout)  = toutes sauf échues
   // true  (Live)  = uniquement celles proposables maintenant (algo v26)
   bool _liveMode = false;
+  // Si on arrive depuis "Voir sur la carte" d'une fiche activite, on garde
+  // l'ID pour : (1) garantir que cette activite apparait sur la carte meme
+  // si elle echoue le filtre Live/echu, (2) ouvrir auto le bottom sheet
+  // de detail, (3) afficher un bouton "Retour a la fiche".
+  int? _focusedActivityId;
+  bool _focusOpenedDetail = false;
+
+  // Categories selectionnees pour le filtre. Vide = afficher toutes.
+  // Les valeurs sont les cles DB ('nature', 'culture', etc.).
+  final Set<String> _selectedCategories = {};
+
+  // Liste des categories filtrables avec leur cle DB + label localise.
+  static const List<({String key, IconData icon})> _filterCategories = [
+    (key: 'nature',     icon: Icons.landscape),
+    (key: 'culture',    icon: Icons.museum),
+    (key: 'gastronomy', icon: Icons.restaurant),
+    (key: 'sport',      icon: Icons.directions_run),
+    (key: 'adventure',  icon: Icons.hiking),
+    (key: 'relax',      icon: Icons.spa),
+    (key: 'fun',        icon: Icons.celebration),
+    (key: 'event',      icon: Icons.event),
+  ];
+
+  String _categoryLabel(String key) {
+    final s = S.current;
+    switch (key) {
+      case 'nature':     return s.quizCatNature;
+      case 'culture':    return s.quizCatCulture;
+      case 'gastronomy': return s.quizCatGastronomy;
+      case 'sport':      return s.quizCatSport;
+      case 'adventure':  return s.quizCatAdventure;
+      case 'relax':      return s.quizCatRelax;
+      case 'fun':        return s.quizCatFun;
+      case 'event':      return s.quizCatEvent;
+      default:           return key;
+    }
+  }
+
+  Color _categoryColor(String key) {
+    switch (key) {
+      case 'nature':     return AppColors.green;
+      case 'culture':    return AppColors.brown;
+      case 'gastronomy': return AppColors.orange;
+      case 'sport':      return AppColors.cyan;
+      case 'adventure':  return AppColors.yellow;
+      case 'relax':      return const Color(0xFFB8A1D9);
+      case 'fun':        return AppColors.yellow;
+      case 'event':      return const Color(0xFFDC2626);
+      default:           return AppColors.stone;
+    }
+  }
 
   // Zoom par defaut quand on centre sur la position utilisateur :
   // 12 = vue de ville (assez large pour voir le canton alentour).
@@ -49,6 +100,10 @@ class _MapScreenState extends State<MapScreen> {
       final lng = args['longitude'] as double?;
       if (lat != null && lng != null) {
         _targetPosition = LatLng(lat, lng);
+      }
+      final id = args['activity_id'];
+      if (id is int) {
+        _focusedActivityId = id;
       }
     }
   }
@@ -110,6 +165,30 @@ class _MapScreenState extends State<MapScreen> {
           _activities = activities;
           _isLoading = false;
         });
+        // Si on est arrives via "Voir sur la carte" d'une fiche, on zoome
+        // sur l'activite + on ouvre son detail automatiquement (1 seule
+        // fois pour ne pas re-trigger a chaque rebuild).
+        if (_focusedActivityId != null && !_focusOpenedDetail) {
+          final target = activities.firstWhere(
+            (a) => a.id == _focusedActivityId,
+            orElse: () => activities.isNotEmpty ? activities.first : Activity(
+              id: -1, title: '', location: '', duration: '',
+              latitude: 0, longitude: 0, features: const [],
+            ),
+          );
+          if (target.id == _focusedActivityId) {
+            _focusOpenedDetail = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              try {
+                _mapController.move(LatLng(target.latitude, target.longitude), 16);
+              } catch (_) {}
+              Future.delayed(const Duration(milliseconds: 600), () {
+                if (mounted) _showActivityDetail(target);
+              });
+            });
+          }
+        }
       }
     } catch (e) {
       debugPrint('Error fetching activities: $e');
@@ -173,10 +252,22 @@ class _MapScreenState extends State<MapScreen> {
     final now = DateTime.now();
     final q = _searchQuery.toLowerCase();
     return _activities.where((a) {
+      // L'activite focusee depuis "Voir sur la carte" passe TOUJOURS, peu
+      // importe les filtres (sinon on cliquerait et rien ne s'afficherait).
+      if (_focusedActivityId != null && a.id == _focusedActivityId) return true;
       // Toujours exclure les échues
       if (a.isExpiredAt(now)) return false;
       // En mode Live : seulement les proposables maintenant
       if (_liveMode && !a.isProposableAt(now)) return false;
+      // Filtre catégories : si une selection existe, l'activite doit avoir
+      // au moins une categorie dans le set selectionne.
+      if (_selectedCategories.isNotEmpty) {
+        final cats = (a.category ?? '')
+            .split(',')
+            .map((c) => c.trim().toLowerCase())
+            .toSet();
+        if (!cats.any((c) => _selectedCategories.contains(c))) return false;
+      }
       if (_searchQuery.isNotEmpty) {
         final matchSearch = a.title.toLowerCase().contains(q) ||
             a.location.toLowerCase().contains(q) ||
@@ -339,46 +430,162 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // Toggle Live / Tout
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            width: 0.5,
+                  // Ligne 1 : Toggle Live / Tout
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.85),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                width: 0.5,
+                              ),
+                            ),
+                            padding: const EdgeInsets.all(4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildModeChip(
+                                  label: s.mapToggleAll,
+                                  icon: Icons.public,
+                                  selected: !_liveMode,
+                                  onTap: () => setState(() => _liveMode = false),
+                                ),
+                                const SizedBox(width: 4),
+                                _buildModeChip(
+                                  label: s.mapToggleLive,
+                                  icon: Icons.bolt,
+                                  selected: _liveMode,
+                                  onTap: () => setState(() => _liveMode = true),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        padding: const EdgeInsets.all(4),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildModeChip(
-                              label: s.mapToggleAll,
-                              icon: Icons.public,
-                              selected: !_liveMode,
-                              onTap: () => setState(() => _liveMode = false),
-                            ),
-                            const SizedBox(width: 4),
-                            _buildModeChip(
-                              label: s.mapToggleLive,
-                              icon: Icons.bolt,
-                              selected: _liveMode,
-                              onTap: () => setState(() => _liveMode = true),
-                            ),
-                          ],
-                        ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Ligne 2 : Filtre par catégories (chips horizontaux scrollables)
+                  SizedBox(
+                    height: 38,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _filterCategories.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 6),
+                      itemBuilder: (context, index) {
+                        final cat = _filterCategories[index];
+                        final selected = _selectedCategories.contains(cat.key);
+                        final color = _categoryColor(cat.key);
+                        return GestureDetector(
+                          onTap: () => setState(() {
+                            if (selected) {
+                              _selectedCategories.remove(cat.key);
+                            } else {
+                              _selectedCategories.add(cat.key);
+                            }
+                          }),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(999),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: selected
+                                      ? color
+                                      : Colors.white.withValues(alpha: 0.85),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: selected
+                                        ? color
+                                        : Colors.black.withValues(alpha: 0.06),
+                                    width: 0.5,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      cat.icon,
+                                      size: 14,
+                                      color: selected ? Colors.white : color,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _categoryLabel(cat.key),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            selected ? Colors.white : AppColors.ink,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
               ),
             ),
           ),
+
+          // Bouton "Retour a la fiche" : visible uniquement quand on arrive
+          // depuis "Voir sur la carte" d'une activite, sinon Navigator.pop()
+          // sortirait vers le HomeScreen (la stack est home -> activite -> map).
+          if (_focusedActivityId != null && Navigator.of(context).canPop())
+            Positioned(
+              top: 0,
+              left: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 0, 0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: Material(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).pop(),
+                          customBorder: const CircleBorder(),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                width: 0.5,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_ios_new,
+                              size: 18,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           // Bouton "+" pour proposer une activité (au-dessus du recentrer)
           Positioned(
