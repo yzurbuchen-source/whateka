@@ -281,10 +281,15 @@ class _QuestionnaireScreenState extends State<QuestionnaireScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         surfaceTintColor: AppColors.surface,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-          onPressed: _handleBack,
-        ),
+        // Sur la 1ere question : pas de fleche back (sortie via bottom nav).
+        // Sur les questions 2 a 5 : fleche pour revenir d'une etape.
+        leading: currentStep > 0
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                onPressed: _handleBack,
+              )
+            : null,
+        automaticallyImplyLeading: false,
         title: Text(
           '${currentStep + 1} / ${questions.length}',
           style: Theme.of(context).textTheme.labelMedium,
