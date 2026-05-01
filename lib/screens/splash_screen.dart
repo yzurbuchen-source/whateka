@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../main.dart';
 import '../services/access_service.dart';
 
@@ -28,6 +29,16 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    // Garde-fou : si on arrive sur le splash sans session (edge case
+    // logout / token expire), on retourne au home.
+    final supabase = Supabase.instance.client;
+    if (supabase.auth.currentSession == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (r) => false);
+      });
+      return;
+    }
     // Verification d'acces en parallele du splash (imperceptible).
     AccessService().hasAccess().then((value) {
       if (!mounted) return;
