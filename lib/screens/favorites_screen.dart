@@ -40,10 +40,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       appBar: AppBar(
         title: Text(s.navFavorites),
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
+        // Pas de fleche back : la navigation se fait via la bottom nav
+        // (Map / Quiz / Favoris / Profil).
+        automaticallyImplyLeading: false,
       ),
       bottomNavigationBar: const WhatekBottomNav(currentRoute: '/favorites'),
       body: FutureBuilder<List<Activity>>(

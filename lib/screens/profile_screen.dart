@@ -279,10 +279,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         title: Text(s.profileTitle),
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
+        // Pas de fleche back : la navigation se fait via la bottom nav.
+        automaticallyImplyLeading: false,
       ),
       bottomNavigationBar: const WhatekBottomNav(currentRoute: '/profile'),
       body: ResponsiveCenter(
