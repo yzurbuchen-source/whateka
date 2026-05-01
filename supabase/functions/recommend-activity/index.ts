@@ -1,4 +1,21 @@
-// Whateka - Edge Function recommend-activity v30
+// Whateka - Edge Function recommend-activity v31
+// CHANGEMENTS v31 (Smart Recommender Phase 1) :
+//   1. Score qualite : bonus selon nb de favoris + rating moyen feedback
+//      - Top 20% qualite : +3
+//      - Top 50% qualite : +1
+//   2. Anti-repetition : penalite sur les activites recemment recommandees
+//      (lues depuis user_prefs.recent_recommendations envoye par le client) :
+//      - Position 0-4  (les 5 dernieres) : -5
+//      - Position 5-19 (5e a 20e plus recente) : -2
+//   3. Meteo intelligente :
+//      - Pluie / neige / orage (weather_code >= 51) : -3 outdoor pur, +2 indoor
+//      - Temp > 28C : +2 nature, +1 detente
+//      - Temp <  5C : +2 indoor, -1 outdoor pur
+//   4. Exploration controlled : remplace le 3e pick Gemini par un "surprise"
+//      tire au sort dans les positions 5-30 (parmi les candidats triés).
+//      Le match_reason est prefixe avec "💡 À découvrir :" pour signaler.
+//      Permet de casser l'effet "toujours les memes" au 2eme/3eme quiz.
+//
 // CHANGEMENTS v30 (par rapport a v29) :
 //   - Ponderation des criteres : les categories sont plus importantes que
 //     la duree. La duree passe de filtre HARD a critere SOFT (scoring).
@@ -256,6 +273,182 @@ function scoreCandidate(
   return score;
 }
 
+/**
+ * v31 (Smart Recommender Phase 1.3) — bonus / penalite meteo selon les
+ * caracteristiques de l'activite. Open-Meteo WMO codes :
+ *   0       : ciel clair
+ *   1-3     : partiellement nuageux
+ *   45-48   : brouillard
+ *   51-67   : bruine / pluie
+ *   71-77   : neige
+ *   80-82   : averses
+ *   85-86   : averses neigeuses
+ *   95-99   : orage
+ */
+function weatherBonus(
+  a: { is_indoor?: boolean | null; is_outdoor?: boolean | null; category?: string | null },
+  weather: { temperature?: number | null; weather_code?: number | null } | null,
+): number {
+  if (!weather) return 0;
+  let bonus = 0;
+  const code = weather.weather_code;
+  const temp = weather.temperature;
+
+  // Mauvais temps : pluie, neige, orage
+  if (typeof code === "number" && code >= 51) {
+    if (a.is_outdoor && !a.is_indoor) bonus -= 3; // outdoor pur penalise
+    if (a.is_indoor) bonus += 2; // indoor / mixte favorise
+  }
+
+  if (typeof temp === "number") {
+    const cats = (a.category ?? "").toLowerCase();
+    // Chaleur : favoriser nature (foret, montagne, eau) et detente (spa)
+    if (temp > 28) {
+      if (cats.includes("nature")) bonus += 2;
+      if (cats.includes("relax")) bonus += 1;
+    }
+    // Froid : favoriser indoor chaud, penaliser outdoor pur
+    if (temp < 5) {
+      if (a.is_indoor) bonus += 2;
+      if (a.is_outdoor && !a.is_indoor) bonus -= 1;
+    }
+  }
+  return bonus;
+}
+
+/**
+ * v31 (Smart Recommender Phase 1.2) — penalite si l'activite a deja ete
+ * recommandee recemment au meme utilisateur. Le client passe la liste
+ * `recent_recommendations` (les plus recents en premier).
+ */
+function recencyPenalty(activityId: number, recentIds: number[] | null | undefined): number {
+  if (!Array.isArray(recentIds)) return 0;
+  const idx = recentIds.indexOf(activityId);
+  if (idx < 0) return 0;
+  if (idx < 5) return -5; // tres recent (5 dernieres reco)
+  if (idx < 20) return -2; // moyennement recent (5-20)
+  return 0;
+}
+
+/**
+ * v31 (Smart Recommender Phase 1.1) — score qualite agrege calcule depuis :
+ *   - nb de favoris    (signal "j'y retournerai")
+ *   - rating moyen     (signal "j'ai aime")
+ *   - nb de feedbacks  (volume = confiance dans la note)
+ * Les top 20% des activites avec un score positif gagnent +3, les 30%
+ * suivantes (top 50%) gagnent +1. Le reste : 0.
+ *
+ * On retourne une Map<activityId, bonus> pour eviter de recalculer dans la boucle.
+ */
+async function fetchQualityBonus(
+  supabase: ReturnType<typeof createClient>,
+  candidateIds: number[],
+): Promise<Map<number, number>> {
+  if (candidateIds.length === 0) return new Map();
+
+  // Compte les favoris par activite (1 query batch)
+  const { data: favRows } = await supabase
+    .from("favorites")
+    .select("activity_id")
+    .in("activity_id", candidateIds);
+
+  const favCount = new Map<number, number>();
+  for (const r of (favRows ?? []) as Array<{ activity_id: number }>) {
+    favCount.set(r.activity_id, (favCount.get(r.activity_id) ?? 0) + 1);
+  }
+
+  // Calcule le rating moyen via feedback_submissions + feedback_answers.
+  // Limite : on ne lit que les ratings (answer_rating IS NOT NULL).
+  const { data: subRows } = await supabase
+    .from("feedback_submissions")
+    .select("id, activity_id")
+    .in("activity_id", candidateIds);
+
+  const subToActivity = new Map<string, number>();
+  for (const r of (subRows ?? []) as Array<{ id: string; activity_id: number }>) {
+    subToActivity.set(r.id, r.activity_id);
+  }
+
+  const ratingSum = new Map<number, number>();
+  const ratingCount = new Map<number, number>();
+  if (subToActivity.size > 0) {
+    const subIds = Array.from(subToActivity.keys());
+    const { data: ansRows } = await supabase
+      .from("feedback_answers")
+      .select("submission_id, answer_rating")
+      .in("submission_id", subIds)
+      .not("answer_rating", "is", null);
+    for (
+      const r of (ansRows ?? []) as Array<{
+        submission_id: string;
+        answer_rating: number;
+      }>
+    ) {
+      const aid = subToActivity.get(r.submission_id);
+      if (aid == null) continue;
+      ratingSum.set(aid, (ratingSum.get(aid) ?? 0) + r.answer_rating);
+      ratingCount.set(aid, (ratingCount.get(aid) ?? 0) + 1);
+    }
+  }
+
+  // Score qualite combine : 0.7 * (rating moyen / 5) + 0.3 * (favoris normalises)
+  // Normalisation favoris : log(1 + nb_fav) / log(1 + max_fav) pour aplatir.
+  const maxFav = Math.max(0, ...favCount.values());
+  const rawScores = new Map<number, number>();
+  for (const id of candidateIds) {
+    const f = favCount.get(id) ?? 0;
+    const rs = ratingSum.get(id) ?? 0;
+    const rc = ratingCount.get(id) ?? 0;
+    const ratingPart = rc > 0 ? rs / rc / 5 : 0; // 0..1
+    const favPart = maxFav > 0 ? Math.log(1 + f) / Math.log(1 + maxFav) : 0;
+    rawScores.set(id, 0.7 * ratingPart + 0.3 * favPart);
+  }
+
+  // Tri descendant pour determiner les seuils top20%/top50%.
+  const sorted = [...rawScores.entries()]
+    .filter(([, s]) => s > 0)
+    .sort((a, b) => b[1] - a[1]);
+  const top20Cutoff = Math.max(1, Math.floor(sorted.length * 0.2));
+  const top50Cutoff = Math.max(1, Math.floor(sorted.length * 0.5));
+
+  const bonus = new Map<number, number>();
+  for (let i = 0; i < sorted.length; i++) {
+    if (i < top20Cutoff) bonus.set(sorted[i][0], 3);
+    else if (i < top50Cutoff) bonus.set(sorted[i][0], 1);
+  }
+  return bonus;
+}
+
+/**
+ * v31 (Smart Recommender Phase 1.4) — remplace le dernier pick Gemini par un
+ * "surprise" tire au sort dans les candidats classes 5e a 30e. Marque le
+ * match_reason avec un emoji 💡 pour que l'UI puisse afficher un badge
+ * "À découvrir". L'idee : casser l'effet "toujours les memes" tout en
+ * gardant les 2 premiers picks (best matches) intacts.
+ */
+function injectSurprise(
+  recommendations: Array<{ id: number; match_reason: string }>,
+  sortedCandidates: Array<{ id: number; title?: string }>,
+): Array<{ id: number; match_reason: string }> {
+  if (recommendations.length < 3 || sortedCandidates.length < 6) {
+    return recommendations;
+  }
+  const pickedIds = new Set(recommendations.slice(0, 2).map((r) => r.id));
+  // Pool : positions 5-30 (index 5 a 29), exclure ce qui a deja ete choisi.
+  const pool = sortedCandidates
+    .slice(5, 30)
+    .filter((c) => !pickedIds.has(c.id));
+  if (pool.length === 0) return recommendations;
+  const surprise = pool[Math.floor(Math.random() * pool.length)];
+  return [
+    ...recommendations.slice(0, 2),
+    {
+      id: surprise.id,
+      match_reason: `💡 À découvrir : ${surprise.title ?? "une activité originale"}.`,
+    },
+  ];
+}
+
 function haversineDistanceKm(
   lat1: number,
   lon1: number,
@@ -298,6 +491,19 @@ serve(async (req) => {
     const duration: string = userPrefs.duration || body.duration || "";
     const radiusKm: number | null =
       userPrefs.radius_km !== undefined ? userPrefs.radius_km : null;
+    // v31 : recent_recommendations envoye par le client (lus de user_metadata).
+    // Les IDs les plus recents en premier — utilises pour la penalite de
+    // recence (anti-repetition).
+    const recentRecommendations: number[] = Array.isArray(
+        userPrefs.recent_recommendations,
+      )
+      ? (userPrefs.recent_recommendations as unknown[])
+        .filter((n): n is number => typeof n === "number")
+      : [];
+    // v31 : meteo extraite du contexte pour le scoring meteo.
+    const weather = (contextData.weather && typeof contextData.weather === "object")
+      ? contextData.weather
+      : null;
     // v22 : Filtre canton ('vaud' | 'valais'). Prioritaire sur le rayon.
     const region: string = (userPrefs.region || body.region || "")
       .toString()
@@ -402,19 +608,25 @@ serve(async (req) => {
       );
     }
 
-    // v28 : ponderation des criteres. Categories > price > environment >
-    // duration > social. Categories et price sont deja filtrees hard ;
-    // environment est filtre hard si l'utilisateur a coche indoor/outdoor.
-    // On score en plus :
-    //   - chaque categorie matchee (au-dela de 1) : +5 (signal fort si l'activite
-    //     coche plusieurs categories cherchees)
-    //   - duration : exact bucket = +4, bucket adjacent = +2, sinon 0
-    //   - social  : +1 par tag match (max +2)
+    // v31 : Smart Recommender Phase 1 — scoring multi-facteurs.
+    // Composants (au-dela des hard filters categories/price/environment) :
+    //   - bonus categories supplementaires (v28)
+    //   - duration scoring soft (v28)
+    //   - social tag match (v28)
+    //   - QUALITE   : favoris + ratings  (v31, bonus jusqu'a +3)
+    //   - METEO     : indoor/outdoor selon temp + weather_code (v31, +/-3)
+    //   - RECENCE   : penalite si deja recommande recemment (v31, -2 a -5)
+    const candidateIds = candidates.map((c) => c.id as number);
+    const qualityBonusMap = await fetchQualityBonus(supabase, candidateIds);
+
     candidates = candidates
-      .map((a) => ({
-        ...a,
-        _score: scoreCandidate(a, { categories, duration, social }),
-      }))
+      .map((a) => {
+        const baseScore = scoreCandidate(a, { categories, duration, social });
+        const qBonus = qualityBonusMap.get(a.id as number) ?? 0;
+        const wBonus = weatherBonus(a as any, weather as any);
+        const rPenalty = recencyPenalty(a.id as number, recentRecommendations);
+        return { ...a, _score: baseScore + qBonus + wBonus + rPenalty };
+      })
       .sort((a, b) => (b._score as number) - (a._score as number));
     // On garde au max 50 candidats apres tri pour limiter la taille du
     // prompt Gemini (ne change rien tant que la base est < 100 entrees).
@@ -486,6 +698,12 @@ serve(async (req) => {
         userSelectedLevels,
       );
     }
+
+    // v31 (Phase 1.4) : injection du "surprise pick" en position 3.
+    // Garde les 2 meilleurs picks intacts, remplace le 3eme par une
+    // activite tiree au sort dans les positions 5-30 du classement.
+    // Marquee "💡 À découvrir" pour que le client puisse afficher un badge.
+    recommendations = injectSurprise(recommendations, candidates as any);
 
     return new Response(
       JSON.stringify({ recommendations, global_comment: globalComment }),
