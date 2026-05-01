@@ -1,4 +1,17 @@
-// Whateka - Edge Function recommend-activity v33
+// Whateka - Edge Function recommend-activity v34
+// CHANGEMENTS v34 (ton conversationnel des match_reason) :
+//   - Refonte du prompt Gemini pour generer des phrases CONVERSATIONNELLES
+//     (style "ami qui te conseille") au lieu de listes d'attributs.
+//     Avant : "Excellent score, gratuit, relax au bord de l'eau, parfait
+//             pour une courte pause solo."
+//     Apres : "Envie d'un break tranquille ? Pose-toi au bord du lac."
+//   - Regles strictes ajoutees au prompt : utilise "tu", pas de jargon
+//     (score, match, recommande), pas de liste d'attributs, pas de
+//     repetition du titre, pas de mention explicite de la categorie.
+//   - Exemples inclus dans le prompt (1-shot learning).
+//   - Fallback (Gemini down) : pool de 5 templates conversationnels +
+//     helper _friendlyCat() pour rendre les categories fluides.
+//
 // CHANGEMENTS v33 (multi-categories priority) :
 //   - Renforcement du bonus pour les activites qui matchent PLUSIEURS
 //     categories choisies par l'utilisateur :
@@ -1216,14 +1229,40 @@ de recherche, triees par score de pertinence DECROISSANT) :
 ${activitiesList}
 
 Selectionne les 3 meilleures activites pour cet utilisateur.
+
+REGLE DE TON pour match_reason (TRES IMPORTANT) :
+Le match_reason est affiche dans une banniere bleue sous le titre de l'activite.
+Il doit etre une phrase CONVERSATIONNELLE et CHALEUREUSE qui donne envie, PAS une
+liste d'attributs.
+
+  ✅ STYLE A ADOPTER : question ou suggestion directe avec "tu",
+     comme un pote qui te conseille. Une seule phrase, max 15 mots.
+     Exemples :
+       "Envie d'un break tranquille ? Pose-toi au bord du lac."
+       "Pour souffler en famille un dimanche, c'est ici."
+       "Une vraie pause culture, sans se ruiner."
+       "Si tu cherches un bon resto sympa entre amis, fonce."
+       "Parfait pour bouger sans planifier toute une journee."
+
+  ❌ A EVITER ABSOLUMENT :
+       - Listes d'attributs separes par virgules (ex : "Gratuit, relax, parfait pour solo")
+       - Mots techniques : "score", "match", "pertinence", "recommande"
+       - Ton catalogue / fiche produit
+       - Repeter le titre de l'activite
+       - Mentionner explicitement la categorie (ex : "Activite nature")
+
+global_comment doit etre une phrase d'accroche generale courte et chaleureuse,
+sans jargon, max 12 mots (ex : "Voici tes 3 idees pour aujourd'hui." ou
+"De quoi te poser un peu cette semaine.").
+
 Reponds UNIQUEMENT en JSON valide, sans markdown, sans explication :
 {
   "recommendations": [
-    {"id": <id>, "match_reason": "<raison courte en francais, max 15 mots>"},
-    {"id": <id>, "match_reason": "<raison courte en francais, max 15 mots>"},
-    {"id": <id>, "match_reason": "<raison courte en francais, max 15 mots>"}
+    {"id": <id>, "match_reason": "<phrase conversationnelle avec tu, max 15 mots>"},
+    {"id": <id>, "match_reason": "<phrase conversationnelle avec tu, max 15 mots>"},
+    {"id": <id>, "match_reason": "<phrase conversationnelle avec tu, max 15 mots>"}
   ],
-  "global_comment": "<phrase d'accroche courte en francais>"
+  "global_comment": "<phrase d'accroche chaleureuse, max 12 mots>"
 }`;
 }
 
@@ -1255,24 +1294,55 @@ function parseGeminiResponse(
   }
 }
 
+/**
+ * v34 : fallbacks conversationnels (ton "ami qui te conseille") utilises
+ * quand Gemini est indisponible. Chaque appel choisit aleatoirement parmi
+ * 5 templates pour eviter la repetition robotique.
+ */
 function buildMatchReason(
   activity: Record<string, unknown>,
   categories: string[],
-  priceMax: number,
+  _priceMax: number,
 ): string {
-  const budget = PRICE_LABELS[priceMax] || "votre budget";
-  const cat = categories[0] || "vos envies";
-  return `${activity.title} correspond a vos envies ${cat} dans votre budget ${budget}.`;
+  const cat = categories[0] || "";
+  const templates = [
+    `Une bonne idee pour aujourd'hui, vraiment.`,
+    `Pose-toi, c'est ce qu'il te faut.`,
+    `Si tu cherches a changer d'air, fonce.`,
+    `Un bon plan pour souffler un peu.`,
+    cat
+      ? `Envie de ${_friendlyCat(cat)} ? Ca tombe bien.`
+      : `Une vraie pause qui fait du bien.`,
+  ];
+  return templates[Math.floor(Math.random() * templates.length)];
 }
 
 function buildGlobalComment(
-  categories: string[],
-  priceMax: number,
-  priceLevels: number[],
+  _categories: string[],
+  _priceMax: number,
+  _priceLevels: number[],
 ): string {
-  const budgetLabel = priceLevels.length > 0
-    ? priceLevels.map((l) => PRICE_LABELS[l]).join(", ")
-    : `${PRICE_LABELS[priceMax]} et moins`;
-  const cat = categories.join(", ") || "vos envies";
-  return `Voici des activites ${cat} dans votre budget (${budgetLabel}).`;
+  const templates = [
+    `Voici tes 3 idees pour aujourd'hui.`,
+    `Petite selection rien que pour toi.`,
+    `De quoi te poser un peu cette semaine.`,
+    `Trois bons plans, choisis ton humeur.`,
+    `Allez, on bouge ?`,
+  ];
+  return templates[Math.floor(Math.random() * templates.length)];
+}
+
+/** Convertit la cle DB en mot fluide pour le ton conversationnel. */
+function _friendlyCat(cat: string): string {
+  switch (cat.toLowerCase()) {
+    case "nature": return "nature";
+    case "culture": return "culture";
+    case "gastronomy": return "bien manger";
+    case "sport": return "bouger";
+    case "adventure": return "sensations";
+    case "relax": return "te detendre";
+    case "fun": return "rigoler";
+    case "event": return "decouvrir un evenement";
+    default: return cat;
+  }
 }
