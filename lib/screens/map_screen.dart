@@ -35,6 +35,12 @@ class _MapScreenState extends State<MapScreen> {
   // false (Tout)  = toutes sauf échues
   // true  (Live)  = uniquement celles proposables maintenant (algo v26)
   bool _liveMode = false;
+  // Si on arrive depuis "Voir sur la carte" d'une fiche activite, on garde
+  // l'ID pour : (1) garantir que cette activite apparait sur la carte meme
+  // si elle echoue le filtre Live/echu, (2) ouvrir auto le bottom sheet
+  // de detail, (3) afficher un bouton "Retour a la fiche".
+  int? _focusedActivityId;
+  bool _focusOpenedDetail = false;
 
   // Zoom par defaut quand on centre sur la position utilisateur :
   // 12 = vue de ville (assez large pour voir le canton alentour).
@@ -49,6 +55,10 @@ class _MapScreenState extends State<MapScreen> {
       final lng = args['longitude'] as double?;
       if (lat != null && lng != null) {
         _targetPosition = LatLng(lat, lng);
+      }
+      final id = args['activity_id'];
+      if (id is int) {
+        _focusedActivityId = id;
       }
     }
   }
@@ -110,6 +120,30 @@ class _MapScreenState extends State<MapScreen> {
           _activities = activities;
           _isLoading = false;
         });
+        // Si on est arrives via "Voir sur la carte" d'une fiche, on zoome
+        // sur l'activite + on ouvre son detail automatiquement (1 seule
+        // fois pour ne pas re-trigger a chaque rebuild).
+        if (_focusedActivityId != null && !_focusOpenedDetail) {
+          final target = activities.firstWhere(
+            (a) => a.id == _focusedActivityId,
+            orElse: () => activities.isNotEmpty ? activities.first : Activity(
+              id: -1, title: '', location: '', duration: '',
+              latitude: 0, longitude: 0, features: const [],
+            ),
+          );
+          if (target.id == _focusedActivityId) {
+            _focusOpenedDetail = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              try {
+                _mapController.move(LatLng(target.latitude, target.longitude), 16);
+              } catch (_) {}
+              Future.delayed(const Duration(milliseconds: 600), () {
+                if (mounted) _showActivityDetail(target);
+              });
+            });
+          }
+        }
       }
     } catch (e) {
       debugPrint('Error fetching activities: $e');
@@ -173,6 +207,9 @@ class _MapScreenState extends State<MapScreen> {
     final now = DateTime.now();
     final q = _searchQuery.toLowerCase();
     return _activities.where((a) {
+      // L'activite focusee depuis "Voir sur la carte" passe TOUJOURS, peu
+      // importe les filtres (sinon on cliquerait et rien ne s'afficherait).
+      if (_focusedActivityId != null && a.id == _focusedActivityId) return true;
       // Toujours exclure les échues
       if (a.isExpiredAt(now)) return false;
       // En mode Live : seulement les proposables maintenant
@@ -379,6 +416,50 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
+
+          // Bouton "Retour a la fiche" : visible uniquement quand on arrive
+          // depuis "Voir sur la carte" d'une activite, sinon Navigator.pop()
+          // sortirait vers le HomeScreen (la stack est home -> activite -> map).
+          if (_focusedActivityId != null && Navigator.of(context).canPop())
+            Positioned(
+              top: 0,
+              left: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 0, 0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: Material(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).pop(),
+                          customBorder: const CircleBorder(),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                width: 0.5,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_ios_new,
+                              size: 18,
+                              color: AppColors.ink,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           // Bouton "+" pour proposer une activité (au-dessus du recentrer)
           Positioned(
