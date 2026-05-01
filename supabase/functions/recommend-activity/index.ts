@@ -1,4 +1,16 @@
-// Whateka - Edge Function recommend-activity v32
+// Whateka - Edge Function recommend-activity v33
+// CHANGEMENTS v33 (multi-categories priority) :
+//   - Renforcement du bonus pour les activites qui matchent PLUSIEURS
+//     categories choisies par l'utilisateur :
+//       * 1 cat demandee : pas de bonus diff (tout candidat passe le filtre SQL)
+//       * 2 cat demandees : +12 si matche 2, +6 si matche 1 (baseline)
+//       * 3 cat demandees : +12 si matche 3, +8 si matche 2, 0 si matche 1
+//   - Bonus pondere "matched / requested * 12" : domine les autres signaux
+//     (quality +3, duration +4, meteo +/-3) -> les multi-match remontent.
+//   - Pour 1 categorie : le filtre SQL garantit deja sa presence dans tous
+//     les candidats donc dans les 3 picks finaux (y compris le surprise).
+//   - Prompt Gemini mis a jour pour expliciter la priorite multi-categorie.
+//
 // CHANGEMENTS v32 (Smart Recommender Phase 2 — personnalisation par historique) :
 //   - computeUserTasteProfile() : construit un profil utilisateur a la volee
 //     a partir de ses FAVORIS (signal principal). Si la table feedback existe
@@ -254,8 +266,11 @@ function scoreCandidate(
 ): number {
   let score = 0;
 
-  // Bonus categorie : +5 par categorie matchee au-dela de 1.
-  // (1 match = obligatoire pour passer le hard filter, donc deja "acquis".)
+  // v33 : bonus categorie renforce pour favoriser les multi-match.
+  // Si l'utilisateur a choisi 2 categories et qu'une activite matche les 2,
+  // elle remonte fortement (+12). Si elle ne matche que la moitie, +6.
+  // Pour 1 seule categorie demandee, le filtre SQL garantit deja la presence,
+  // donc pas de bonus differenciant ici.
   const activityCats = (a.category ?? "")
     .split(",")
     .map((c) => c.trim().toLowerCase())
@@ -263,7 +278,13 @@ function scoreCandidate(
   const matchedCats = prefs.categories.filter((c) =>
     activityCats.some((ac) => ac.includes(c.toLowerCase()))
   ).length;
-  if (matchedCats > 1) score += 5 * (matchedCats - 1);
+  const requestedCats = prefs.categories.length;
+  if (requestedCats >= 2 && matchedCats >= 1) {
+    // Score proportionnel : matched/requested * 12.
+    // matched=2 sur 2 -> +12 ; matched=1 sur 2 -> +6
+    // matched=3 sur 3 -> +12 ; matched=2 sur 3 -> +8 ; matched=1 sur 3 -> +4
+    score += (matchedCats / requestedCats) * 12;
+  }
 
   // Score duration : exact = +4, adjacent = +2, sinon 0.
   // short < 180min, medium 180-300min, long > 300min.
@@ -1166,6 +1187,14 @@ function buildGeminiPrompt(
     ? "\n- DIVERSITE PRIX : l'utilisateur a coche plusieurs budgets. Privilegie une selection VARIEE couvrant differents niveaux de prix si possible (ex : 1 gratuite + 2 payantes), sauf si une seule activite est clairement la meilleure pour chaque critere."
     : "";
 
+  // v33 : explicite la regle multi-categorie selon le nombre demande.
+  const nCat = prefs.categories.length;
+  const multiCatRule = nCat === 1
+    ? `REGLE CATEGORIE : l'utilisateur a choisi 1 seule categorie (${prefs.categories[0]}). Toutes les activites de la liste la contiennent deja — choisis simplement les 3 meilleures.`
+    : nCat >= 2
+    ? `REGLE CATEGORIE PRIORITAIRE : l'utilisateur a choisi ${nCat} categories (${prefs.categories.join(", ")}). PRIVILEGIE FORTEMENT les activites qui en couvrent PLUSIEURS a la fois. Une activite qui matche les ${nCat} categories doit toujours etre prefere a une activite qui n'en matche qu'une, meme si cette derniere semble plus attractive sur d'autres criteres. Tu peux quand meme inclure une activite mono-categorie si elle est exceptionnelle.`
+    : "";
+
   return `Tu es un assistant de recommandation d'activites touristiques en Vaud / Valais (Suisse).
 
 L'utilisateur cherche, par ordre d'importance DECROISSANT :
@@ -1175,6 +1204,8 @@ L'utilisateur cherche, par ordre d'importance DECROISSANT :
 3. Environnement             : ${prefs.environment || "indifferent"}
 4. Duree (preference)        : ${prefs.duration || "indifferent"}
 5. Social (preference)       : ${prefs.social || "indifferent"}
+
+${multiCatRule}
 
 REGLE DE PONDERATION : la duree et le social sont des PREFERENCES, pas des
 contraintes dures. Si une activite hors-bucket de duree est nettement plus
