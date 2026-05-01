@@ -92,6 +92,10 @@ class _MyAppState extends State<MyApp> {
       if (data.event == AuthChangeEvent.signedIn) {
         LocaleProvider.instance.init();
       }
+      // Logout / token expire : retour au home pour reconnexion.
+      if (data.event == AuthChangeEvent.signedOut) {
+        navigatorKey.currentState?.pushNamedAndRemoveUntil('/', (r) => false);
+      }
     });
   }
 
@@ -203,12 +207,20 @@ class _MyAppState extends State<MyApp> {
       ),
     );
 
+    // Persistance de session : Supabase garde la session dans le storage
+    // local (shared_preferences). Si une session existe au demarrage, on
+    // saute le HomeScreen et on va directement au splash qui verifie
+    // l'acces puis route vers /map ou /maintenance.
+    // L'utilisateur ne se reconnecte donc PAS a chaque ouverture de l'app.
+    final hasSession = Supabase.instance.client.auth.currentSession != null;
+    final initialRoute = hasSession ? '/splash' : '/';
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       title: 'Whateka',
       theme: theme,
-      initialRoute: '/',
+      initialRoute: initialRoute,
       routes: {
         '/': (_) => const HomeScreen(),
         '/signup': (_) => const SignUpScreen(),
