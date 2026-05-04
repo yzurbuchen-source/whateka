@@ -62,67 +62,102 @@ class _AvatarPromenadeState extends State<AvatarPromenade>
   static const double _displayHeight = 160;
   static const double _scale = _displayWidth / _svgWidth;
 
-  // Palettes par avatar (extraites des SVG originaux).
+  // Palettes par avatar (15 personnages thematiques style alpin Suisse,
+  // refonte complete v2026-05). Couleurs alignees EXACTEMENT sur les SVG :
+  //   - sleeve : couleur du haut/manche (le bras anime utilise cette couleur)
+  //   - pants  : couleur des jambes animees (skin pour shorts, pant color sinon)
+  //   - shoe   : couleur des chaussures animees
+  //   - skin   : couleur des mains animees (= peau visible du visage SVG)
   static const Map<int, _Palette> _palettes = {
-    1: _Palette( // Sam : hoodie cyan + pantalon navy
-      sleeve: Color(0xFF00B8D9),
-      pants: Color(0xFF1C2A3A),
-      shoe: Color(0xFF0A0A0B),
-      skin: Color(0xFFF0C99A),
+    1: _Palette( // Lina - randonneuse (bermuda kaki, polo vert, sac cyan)
+      sleeve: Color(0xFF5A7F6F),
+      pants: Color(0xFFE8D4B8), // shorts -> jambes nues
+      shoe: Color(0xFF5C4A3A),
+      skin: Color(0xFFE8D4B8),
     ),
-    2: _Palette( // Max : cardigan beige + pantalon brun
-      sleeve: Color(0xFFE8DCC0),
-      pants: Color(0xFF6B4423),
-      shoe: Color(0xFF3D2817),
-      skin: Color(0xFFE0AE7B),
+    2: _Palette( // Tom - cycliste (maillot jaune, cuissard, casque)
+      sleeve: Color(0xFFD4BC34),
+      pants: Color(0xFFE8D4B8), // cuissard -> jambes nues sous le short
+      shoe: Color(0xFFF5F5F5),
+      skin: Color(0xFFE8D4B8),
     ),
-    3: _Palette( // Lina : bras nus + jambes nues + sandales
-      sleeve: Color(0xFFF0C99A),
-      pants: Color(0xFFF0C99A),
-      shoe: Color(0xFF8B6F47),
-      skin: Color(0xFFF0C99A),
+    3: _Palette( // Aicha - paysagiste (chapeau paille, peau foncee)
+      sleeve: Color(0xFF6B8F7F),
+      pants: Color(0xFFD4C4AE),
+      shoe: Color(0xFFC4A57A),
+      skin: Color(0xFF7D5840),
     ),
-    4: _Palette( // Amadou : sweat noir + pantalon gris + baskets cyan
-      sleeve: Color(0xFF1A1A1A),
-      pants: Color(0xFF2D2D2D),
-      shoe: Color(0xFF00B8D9),
-      skin: Color(0xFF5D3D28),
+    4: _Palette( // Marc - architecte (cardigan, lunettes, sac fourre-tout)
+      sleeve: Color(0xFF556B7F),
+      pants: Color(0xFF2C3E50),
+      shoe: Color(0xFF5C4A3A),
+      skin: Color(0xFFE8D4B8),
     ),
-    5: _Palette( // Theo : bras nus + short blanc + chaussettes blanches
-      sleeve: Color(0xFFE0AE7B),
-      pants: Color(0xFFF0F0F0),
-      shoe: Color(0xFFFFFFFF),
-      skin: Color(0xFFE0AE7B),
+    5: _Palette( // Anais - photographe (veste kaki, appareil photo)
+      sleeve: Color(0xFF556B7F),
+      pants: Color(0xFF1A1A20),
+      shoe: Color(0xFF2A2A2A),
+      skin: Color(0xFFE8D4B8),
     ),
-    6: _Palette( // Chloe : blouse blanche + jupe lavande + sandales
-      sleeve: Color(0xFFFFFFFF),
-      pants: Color(0xFFC7B3E0),
-      shoe: Color(0xFF8B6F47),
-      skin: Color(0xFFF0C99A),
+    6: _Palette( // Igor - musicien (manteau gris, etui guitare)
+      sleeve: Color(0xFF8B8680),
+      pants: Color(0xFF2C3E50),
+      shoe: Color(0xFF2A2A2A),
+      skin: Color(0xFFE8D4B8),
     ),
-    7: _Palette( // Lucas : chemise rouge + jean + bottes marron
-      sleeve: Color(0xFF992D2D),
-      pants: Color(0xFF1C2A3A),
-      shoe: Color(0xFF3D2817),
-      skin: Color(0xFFE0AE7B),
+    7: _Palette( // Pauline - sommeliere (gilet bordeaux, foulard)
+      sleeve: Color(0xFF6B5A7F),
+      pants: Color(0xFF1A1A1A),
+      shoe: Color(0xFF2A2A2A),
+      skin: Color(0xFFE8D4B8),
     ),
-    8: _Palette( // Yuki : dress vert + jambes nues + sandales
-      sleeve: Color(0xFF97C45F),
-      pants: Color(0xFFE8B88B),
-      shoe: Color(0xFF3D2817),
+    8: _Palette( // Matteo - patissier (toque blanche, tablier)
+      sleeve: Color(0xFFD4C4AE),
+      pants: Color(0xFF2C2C2C),
+      shoe: Color(0xFFF5F5F5),
+      skin: Color(0xFFE8D4B8),
+    ),
+    9: _Palette( // Lucas - skieur (combi marine, lunettes ski)
+      sleeve: Color(0xFF1F3A4A),
+      pants: Color(0xFF1F3A4A),
+      shoe: Color(0xFF1A1A1A),
+      skin: Color(0xFFE8D4B8),
+    ),
+    10: _Palette( // Emma - traileuse (tank corail, short, sac d'eau)
+      sleeve: Color(0xFFE8D4B8), // bras nus
+      pants: Color(0xFFE8D4B8), // short -> jambes nues
+      shoe: Color(0xFFE6F029),
+      skin: Color(0xFFE8D4B8),
+    ),
+    11: _Palette( // Yuki - kayakiste (gilet jaune fluo, pagaie)
+      sleeve: Color(0xFF1A1A1A), // rashguard noir
+      pants: Color(0xFFF0DCC4), // short -> jambes nues
+      shoe: Color(0xFF6B7A8B),
+      skin: Color(0xFFF0DCC4),
+    ),
+    12: _Palette( // Maya - thermes (peignoir blanc, turban corail)
+      sleeve: Color(0xFFF8F4ED),
+      pants: Color(0xFFF8F4ED), // peignoir long
+      shoe: Color(0xFFC4A57A),
       skin: Color(0xFFE8B88B),
     ),
-    9: _Palette( // Emma : veste jean bleu + jean noir + baskets blanches
-      sleeve: Color(0xFF3E5D7E),
-      pants: Color(0xFF0A0A0B),
-      shoe: Color(0xFFFFFFFF),
-      skin: Color(0xFFF0C99A),
+    13: _Palette( // Hugo - lecteur (cardigan beige, lunettes, livre)
+      sleeve: Color(0xFFA89274),
+      pants: Color(0xFF6B5A6B),
+      shoe: Color(0xFF5C4A3A),
+      skin: Color(0xFFE8D4B8),
     ),
-    10: _Palette( // Nathan : polo jaune + chino + baskets blanches
-      sleeve: Color(0xFFF6AE2D),
-      pants: Color(0xFFC8A878),
-      shoe: Color(0xFFFFFFFF),
-      skin: Color(0xFFE0AE7B),
+    14: _Palette( // Nathan - grimpeur (harnais orange, corde)
+      sleeve: Color(0xFFD4A878), // bras nus peau bronzee
+      pants: Color(0xFFD4A878), // short -> jambes nues
+      shoe: Color(0xFFD83034),
+      skin: Color(0xFFD4A878),
+    ),
+    15: _Palette( // Sophia - maman (echarpe portage, sac a langer)
+      sleeve: Color(0xFFC4B5DD),
+      pants: Color(0xFFBFBAB0),
+      shoe: Color(0xFFF5F5F5),
+      skin: Color(0xFFE8D4B8),
     ),
   };
 
@@ -272,6 +307,22 @@ class _AvatarPromenadeState extends State<AvatarPromenade>
     // Amplitude des rotations de membres (en radians). ~28° max.
     final armSwing = phase * 0.5;
     final legSwing = phase * 0.4;
+    // v2 : flexion realiste du genou et du coude.
+    // Le genou plie quand la jambe est en phase de "swing" (foot off ground),
+    // c'est-a-dire quand l'angle de hanche est en train d'augmenter (cos > 0).
+    // Pour la jambe gauche : angle = +legSwing, derivee = +cos(t) → bend si cos > 0.
+    // Pour la jambe droite : angle = -legSwing, derivee = -cos(t) → bend si cos < 0.
+    // Idem pour les coudes (les bras swing en phase opposee aux jambes).
+    final cosPhase = _state == _PromenadeState.walking
+        ? math.cos(_walkTime * 5)
+        : 0.0;
+    final leftKneeBend = math.max(0.0, cosPhase) * 0.7;   // 0..40°
+    final rightKneeBend = math.max(0.0, -cosPhase) * 0.7;
+    // Coude : plus subtil que le genou (~25° max).
+    // Bras droit (avant) : angle = +armSwing → bend si cos > 0.
+    // Bras gauche (arriere) : angle = -armSwing → bend si cos < 0.
+    final rightElbowBend = math.max(0.0, cosPhase) * 0.4;
+    final leftElbowBend = math.max(0.0, -cosPhase) * 0.4;
 
     return SizedBox(
       height: widget.height,
@@ -312,15 +363,18 @@ class _AvatarPromenadeState extends State<AvatarPromenade>
                               _Leg(
                                 hipX: 42,
                                 hipY: 118,
-                                // Jambe "droite" (index 0) : decalage phase 0.
-                                angle: legSwing,
+                                // Jambe "gauche" (hanche gauche).
+                                hipAngle: legSwing,
+                                kneeBend: leftKneeBend,
                                 pants: palette.pants,
                                 shoe: palette.shoe,
                               ),
                               _Leg(
                                 hipX: 56,
                                 hipY: 118,
-                                angle: -legSwing,
+                                // Jambe "droite" (hanche droite, phase opposee).
+                                hipAngle: -legSwing,
+                                kneeBend: rightKneeBend,
                                 pants: palette.pants,
                                 shoe: palette.shoe,
                               ),
@@ -328,8 +382,9 @@ class _AvatarPromenadeState extends State<AvatarPromenade>
                               _Arm(
                                 shoulderX: 28,
                                 shoulderY: 58,
-                                // Bras "droit" (index 0) : phase opposee a la jambe droite.
-                                angle: -armSwing,
+                                // Bras gauche : phase opposee au bras droit.
+                                shoulderAngle: -armSwing,
+                                elbowBend: leftElbowBend,
                                 sleeve: palette.sleeve,
                                 skin: palette.skin,
                               ),
@@ -343,7 +398,8 @@ class _AvatarPromenadeState extends State<AvatarPromenade>
                               _Arm(
                                 shoulderX: 82,
                                 shoulderY: 58,
-                                angle: armSwing,
+                                shoulderAngle: armSwing,
+                                elbowBend: rightElbowBend,
                                 sleeve: palette.sleeve,
                                 skin: palette.skin,
                               ),
@@ -374,57 +430,101 @@ class _AvatarPromenadeState extends State<AvatarPromenade>
   }
 }
 
-/// Jambe animee qui pivote autour de la hanche.
+/// Jambe animee a 2 segments avec genou flexible.
+/// - Cuisse : pivote autour de la hanche selon [hipAngle]
+/// - Tibia : pivote autour du genou (bas de cuisse) selon [kneeBend]
+/// - Pied : ellipse au bas du tibia
+///
+/// Le genou plie naturellement quand la jambe est en phase de "swing"
+/// (foot off ground) — donne une demarche realiste plutot que stiff.
 class _Leg extends StatelessWidget {
   final double hipX;
   final double hipY;
-  final double angle; // radians
+  final double hipAngle; // radians, ± ~25°
+  final double kneeBend; // radians, 0 a ~40° (toujours positif, plie en arriere)
   final Color pants;
   final Color shoe;
 
   const _Leg({
     required this.hipX,
     required this.hipY,
-    required this.angle,
+    required this.hipAngle,
+    required this.kneeBend,
     required this.pants,
     required this.shoe,
   });
 
   @override
   Widget build(BuildContext context) {
-    const legWidth = 14.0;
-    const legHeight = 80.0;
+    const thighWidth = 14.0;
+    const thighHeight = 38.0;
+    const shinWidth = 13.0;
+    const shinHeight = 40.0;
+    const shoeHeight = 10.0;
+    const totalHeight = thighHeight + shinHeight + shoeHeight - 4;
+
     return Positioned(
-      left: hipX - legWidth / 2,
+      left: hipX - thighWidth / 2,
       top: hipY,
       child: Transform.rotate(
-        angle: angle,
+        angle: hipAngle,
         alignment: Alignment.topCenter,
         child: SizedBox(
-          width: legWidth,
-          height: legHeight + 6,
+          width: thighWidth,
+          height: totalHeight + 4,
           child: Stack(
             clipBehavior: Clip.none,
             alignment: Alignment.topCenter,
             children: [
-              // Pantalon
+              // Cuisse (haut)
               Container(
-                width: legWidth,
-                height: legHeight,
+                width: thighWidth,
+                height: thighHeight,
                 decoration: BoxDecoration(
                   color: pants,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(6),
+                    bottom: Radius.circular(2),
+                  ),
                 ),
               ),
-              // Pied/chaussure
+              // Tibia + pied : pivote autour du genou (bas de cuisse).
               Positioned(
-                top: legHeight - 6,
-                child: Container(
-                  width: legWidth + 6,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: shoe,
-                    borderRadius: BorderRadius.circular(5),
+                top: thighHeight - 1,
+                child: Transform.rotate(
+                  angle: kneeBend,
+                  alignment: Alignment.topCenter,
+                  child: SizedBox(
+                    width: shinWidth,
+                    height: shinHeight + shoeHeight,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.topCenter,
+                      children: [
+                        Container(
+                          width: shinWidth,
+                          height: shinHeight,
+                          decoration: BoxDecoration(
+                            color: pants,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(2),
+                              bottom: Radius.circular(3),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: shinHeight - 5,
+                          child: Container(
+                            width: shinWidth + 6,
+                            height: shoeHeight,
+                            decoration: BoxDecoration(
+                              color: shoe,
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -436,18 +536,26 @@ class _Leg extends StatelessWidget {
   }
 }
 
-/// Bras anime qui pivote autour de l'epaule.
+/// Bras anime a 2 segments avec coude flexible.
+/// - Bras (haut) : pivote autour de l'epaule selon [shoulderAngle]
+/// - Avant-bras : pivote autour du coude selon [elbowBend]
+/// - Main : cercle au bout de l'avant-bras
+///
+/// Le coude plie subtilement quand le bras swing en avant — donne une
+/// allure naturelle (pas de bras raides comme un soldat).
 class _Arm extends StatelessWidget {
   final double shoulderX;
   final double shoulderY;
-  final double angle;
+  final double shoulderAngle; // radians, ± ~28°
+  final double elbowBend;     // radians, 0 a ~25°
   final Color sleeve;
   final Color skin;
 
   const _Arm({
     required this.shoulderX,
     required this.shoulderY,
-    required this.angle,
+    required this.shoulderAngle,
+    required this.elbowBend,
     required this.sleeve,
     required this.skin,
   });
@@ -455,36 +563,70 @@ class _Arm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const armWidth = 12.0;
-    const armHeight = 60.0;
+    const upperArmHeight = 28.0;
+    const forearmWidth = 11.0;
+    const forearmHeight = 30.0;
+    const handSize = 10.0;
+
     return Positioned(
       left: shoulderX - armWidth / 2,
       top: shoulderY,
       child: Transform.rotate(
-        angle: angle,
+        angle: shoulderAngle,
         alignment: Alignment.topCenter,
         child: SizedBox(
           width: armWidth,
-          height: armHeight + 5,
+          height: upperArmHeight + forearmHeight + handSize,
           child: Stack(
             clipBehavior: Clip.none,
             alignment: Alignment.topCenter,
             children: [
+              // Bras (haut)
               Container(
                 width: armWidth,
-                height: armHeight,
+                height: upperArmHeight,
                 decoration: BoxDecoration(
                   color: sleeve,
-                  borderRadius: BorderRadius.circular(5),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(6),
+                    bottom: Radius.circular(3),
+                  ),
                 ),
               ),
+              // Avant-bras + main : pivote autour du coude.
               Positioned(
-                top: armHeight - 4,
-                child: Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: skin,
-                    shape: BoxShape.circle,
+                top: upperArmHeight - 1,
+                child: Transform.rotate(
+                  angle: elbowBend,
+                  alignment: Alignment.topCenter,
+                  child: SizedBox(
+                    width: forearmWidth,
+                    height: forearmHeight + handSize,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.topCenter,
+                      children: [
+                        Container(
+                          width: forearmWidth,
+                          height: forearmHeight,
+                          decoration: BoxDecoration(
+                            color: sleeve,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        Positioned(
+                          top: forearmHeight - 3,
+                          child: Container(
+                            width: handSize,
+                            height: handSize,
+                            decoration: BoxDecoration(
+                              color: skin,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -538,16 +680,21 @@ class WhatekaAvatar {
   const WhatekaAvatar(this.id, this.name, this.filename);
 
   static const all = [
-    WhatekaAvatar(1, 'Sam', '01_sam.svg'),
-    WhatekaAvatar(2, 'Max', '02_max.svg'),
-    WhatekaAvatar(3, 'Lina', '03_lina.svg'),
-    WhatekaAvatar(4, 'Amadou', '04_amadou.svg'),
-    WhatekaAvatar(5, 'Théo', '05_theo.svg'),
-    WhatekaAvatar(6, 'Chloé', '06_chloe.svg'),
-    WhatekaAvatar(7, 'Lucas', '07_lucas.svg'),
-    WhatekaAvatar(8, 'Yuki', '08_yuki.svg'),
-    WhatekaAvatar(9, 'Emma', '09_emma.svg'),
-    WhatekaAvatar(10, 'Nathan', '10_nathan.svg'),
+    WhatekaAvatar(1, 'Lina', '01_lina.svg'),
+    WhatekaAvatar(2, 'Tom', '02_tom.svg'),
+    WhatekaAvatar(3, 'Aïcha', '03_aicha.svg'),
+    WhatekaAvatar(4, 'Marc', '04_marc.svg'),
+    WhatekaAvatar(5, 'Anaïs', '05_anais.svg'),
+    WhatekaAvatar(6, 'Igor', '06_igor.svg'),
+    WhatekaAvatar(7, 'Pauline', '07_pauline.svg'),
+    WhatekaAvatar(8, 'Matteo', '08_matteo.svg'),
+    WhatekaAvatar(9, 'Lucas', '09_lucas.svg'),
+    WhatekaAvatar(10, 'Emma', '10_emma.svg'),
+    WhatekaAvatar(11, 'Yuki', '11_yuki.svg'),
+    WhatekaAvatar(12, 'Maya', '12_maya.svg'),
+    WhatekaAvatar(13, 'Hugo', '13_hugo.svg'),
+    WhatekaAvatar(14, 'Nathan', '14_nathan.svg'),
+    WhatekaAvatar(15, 'Sophia', '15_sophia.svg'),
   ];
 
   static WhatekaAvatar byId(int id) =>
